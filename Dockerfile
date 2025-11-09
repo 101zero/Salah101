@@ -14,22 +14,11 @@ ENV GOARCH=amd64
 ENV GOPATH=/go
 ENV PATH=$PATH:/go/bin
 
-# Build nuclei (v3) from source - more reliable than go install
-WORKDIR /tmp
-RUN git clone --depth 1 https://github.com/projectdiscovery/nuclei.git && \
-    cd nuclei && \
-    cd v3 && \
-    go mod download && \
-    go build -ldflags="-s -w" -o /go/bin/nuclei ./cmd/nuclei && \
-    rm -rf /tmp/nuclei
+# Install nuclei (v3) using go install
+RUN go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
 
-# Build notify from source
-WORKDIR /tmp
-RUN git clone --depth 1 https://github.com/projectdiscovery/notify.git && \
-    cd notify && \
-    go mod download && \
-    go build -ldflags="-s -w" -o /go/bin/notify ./cmd/notify && \
-    rm -rf /tmp/notify
+# Install notify using go install
+RUN go install -v github.com/projectdiscovery/notify/cmd/notify@latest
 
 # Verify binaries exist and are executable
 RUN ls -lh /go/bin/ && \
