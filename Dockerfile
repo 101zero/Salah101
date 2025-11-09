@@ -1,32 +1,42 @@
-FROM golang:1.21-bullseye AS build
+# Multi-stage Dockerfile for nuclei + notify scanner
+# Stage 1: Build nuclei and notify binaries
+FROM golang:1.21-alpine AS builder
 
-# 1) نثبت nuclei و notify باستخدام go install أثناء الـ build stage
-RUN mkdir -p /build
-WORKDIR /build
+# Install build dependencies
+RUN apk add --no-cache git make
 
-# ensure modules download cache won't fail
-ENV GO111MODULE=on
-RUN go env -w GOPATH=/go
-
-# install binaries
+# Build nuclei (v3)
 RUN go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+
+# Build notify
 RUN go install -v github.com/projectdiscovery/notify/cmd/notify@latest
 
-# create a minimal runtime image
+# Stage 2: Runtime image
 FROM debian:bookworm-slim
 
-# copy binaries from build
-COPY --from=build /go/bin/nuclei /usr/local/bin/nuclei
-COPY --from=build /go/bin/notify /usr/local/bin/notify
+# Install runtime dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
 
-# install wget/unzip/curl if needed
-RUN apt-get update -y && apt-get install -y wget unzip ca-certificates curl && rm -rf /var/lib/apt/lists/*
+# Copy binaries from builder
+COPY --from=builder /go/bin/nuclei /usr/local/bin/nuclei
+COPY --from=builder /go/bin/notify /usr/local/bin/notify
 
-# Copy the run script
-COPY run.sh /usr/local/bin/run-nuclei.sh
-RUN chmod +x /usr/local/bin/run-nuclei.sh
+# Create necessary directories
+RUN mkdir -p /data /secrets /nuclei-templates && \
+    chmod 755 /data /secrets /nuclei-templates
 
-# Working dir where /data will be mounted
+# Copy run script
+COPY run.sh /usr/local/bin/run.sh
+RUN chmod +x /usr/local/bin/run.sh
+
+# Set working directory
 WORKDIR /data
 
-ENTRYPOINT ["/usr/local/bin/run-nuclei.sh"]
+# Default entrypoint
+ENTRYPOINT ["/usr/local/bin/run.sh"]
+
