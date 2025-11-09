@@ -77,6 +77,12 @@ validate_files() {
     if [ ! -f "$TARGETS_PATH" ]; then
         log_error "Targets file not found: $TARGETS_PATH"
         log_info "Please ensure the targets file exists or set TARGETS_PATH environment variable"
+        log_info "Checking /data directory contents:"
+        ls -la /data/ 2>/dev/null || log_warn "/data directory does not exist or is not accessible"
+        log_info "To fix this:"
+        log_info "1. Ensure a volume is mounted at /data in Northflank"
+        log_info "2. Upload your targets file to the volume (e.g., 5subdomains.txt)"
+        log_info "3. Or set TARGETS_PATH environment variable to point to your file"
         exit 1
     fi
     
