@@ -1,6 +1,6 @@
 # Multi-stage Dockerfile for nuclei + notify scanner
 # Stage 1: Build nuclei and notify binaries
-FROM golang:1.22-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache git make ca-certificates
