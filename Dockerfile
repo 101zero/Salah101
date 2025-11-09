@@ -1,6 +1,6 @@
 # Multi-stage Dockerfile for nuclei + notify scanner
 # Stage 1: Build nuclei and notify binaries
-FROM golang:1.21-alpine AS builder
+FROM golang:1.22-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache git make ca-certificates
@@ -9,24 +9,28 @@ RUN apk add --no-cache git make ca-certificates
 ENV CGO_ENABLED=0
 ENV GOOS=linux
 ENV GOARCH=amd64
+
+# Ensure GOPATH is set and binaries go to /go/bin
 ENV GOPATH=/go
 ENV PATH=$PATH:/go/bin
 
-# Enable Go modules
-ENV GO111MODULE=on
+# Create go.mod file to enable module mode
+WORKDIR /build
+RUN go mod init temp-build
 
 # Build nuclei (v3)
-# Using the correct module path for nuclei v3
-RUN go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+RUN go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
 
 # Build notify
-RUN go install -v github.com/projectdiscovery/notify/cmd/notify@latest
+RUN go install github.com/projectdiscovery/notify/cmd/notify@latest
 
-# Verify binaries were created
+# Verify binaries exist and are executable
 RUN ls -lh /go/bin/ && \
     test -f /go/bin/nuclei && \
     test -f /go/bin/notify && \
-    echo "Binaries built successfully"
+    test -x /go/bin/nuclei && \
+    test -x /go/bin/notify && \
+    echo "✓ Both binaries built and verified successfully"
 
 # Stage 2: Runtime image
 FROM debian:bookworm-slim
