@@ -3,13 +3,30 @@
 FROM golang:1.21-alpine AS builder
 
 # Install build dependencies
-RUN apk add --no-cache git make
+RUN apk add --no-cache git make ca-certificates
+
+# Set Go environment variables
+ENV CGO_ENABLED=0
+ENV GOOS=linux
+ENV GOARCH=amd64
+ENV GOPATH=/go
+ENV PATH=$PATH:/go/bin
+
+# Enable Go modules
+ENV GO111MODULE=on
 
 # Build nuclei (v3)
+# Using the correct module path for nuclei v3
 RUN go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
 
 # Build notify
 RUN go install -v github.com/projectdiscovery/notify/cmd/notify@latest
+
+# Verify binaries were created
+RUN ls -lh /go/bin/ && \
+    test -f /go/bin/nuclei && \
+    test -f /go/bin/notify && \
+    echo "Binaries built successfully"
 
 # Stage 2: Runtime image
 FROM debian:bookworm-slim
